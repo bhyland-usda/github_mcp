@@ -13,6 +13,7 @@ without a `GITHUB_TOKEN`, though authenitcated requests have higher rate limits 
 - List repository issues
 - Fetch a specific issue
 - Create a new issue
+- Create a new PR
 - List repository pull requests (PRs)
 - Fetch a specific PR
 - Return structured JSON responses from the GitHub API
@@ -20,7 +21,6 @@ without a `GITHUB_TOKEN`, though authenitcated requests have higher rate limits 
 
 ### Planned
 - Fetch and create issue and PR comments
-- Create a new PR
 - Fetch a list of remote branches for a repository
 - Fetch a list of commits and their details that have been pushed to the repository
 - Fetch a list of releases and the release details
@@ -93,6 +93,7 @@ secret manager, or MCP client environment configuration rather than commit it to
 | list_issues | List issues for a repository. | `owner`, `repo`, `state`, `per_page`, `page` |
 | get_issue | Get a specific issue. | `owner`, `repo`, `issue_number` |
 | create_issue | Create a new issue. | `owner`, `repo`, `title`, `body`, `labels`, `assignees` |
+| create_pull_request | Create a new pull requst for a repository. | `owner`, `repo`, `title`, `body`, `issue` |
 | list_pull_requests | List pull requests for a repository. | `owner`, `repo`, `state`, `per_page`, `page` |
 | get_pull_request | Get a specific pull request. | `owner`, `repo`, `pull_number` |
 

@@ -86,6 +86,24 @@ pub struct CreateIssueParams {
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
+pub struct CreatePullRequestParams {
+    pub owner: String,
+    pub repo: String,
+    #[schemars(description = "Pull request title")]
+    pub title: String,
+    #[schemars(description = "Pull request body")]
+    pub body: String,
+    #[schemars(
+        description = "The repository and branch or this repository's branch that the feature is coming from (fork:new-feature)"
+    )]
+    pub head: String,
+    #[schemars(description = "The branch the PR is meant to be merged into")]
+    pub base: String,
+    #[schemars(description = "An optional issue to link the PR to")]
+    pub issue: Option<String>,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
 pub struct ListPullRequestsParams {
     pub owner: String,
     pub repo: String,
@@ -212,6 +230,35 @@ impl GithubServer {
         Ok(CallToolResult::structured(result))
     }
 
+    #[tool(description = "Create a pull request for a GitHub repository")]
+    async fn create_pull_request(
+        &self,
+        Parameters(params): Parameters<CreatePullRequestParams>,
+    ) -> Result<CallToolResult, rmcp::ErrorData> {
+        let path = format!("/repos/{}/{}/pulls", enc(&params.owner), enc(&params.repo));
+
+        let mut body = serde_json::Map::new();
+        body.insert("title".to_string(), serde_json::Value::String(params.title));
+        body.insert("body".to_string(), serde_json::Value::String(params.body));
+        body.insert("head".to_string(), serde_json::Value::String(params.head));
+        body.insert("base".to_string(), serde_json::Value::String(params.base));
+        body.insert(
+            "maintainer_can_modify".to_string(),
+            serde_json::Value::Bool(true),
+        );
+
+        if let Some(issue) = params.issue {
+            body.insert("issue".to_string(), serde_json::Value::String(issue));
+        }
+
+        let result = self
+            .client
+            .post(&path, serde_json::Value::Object(body))
+            .await?;
+
+        Ok(CallToolResult::structured(result))
+    }
+
     #[tool(description = "List pull requests for a GitHub repository")]
     async fn list_pull_requests(
         &self,
@@ -250,7 +297,7 @@ impl GithubServer {
 
 #[tool_handler(
     name = "github-mcp-server",
-    version = "0.1.0",
+    version = "0.1.1",
     instructions = "MCP server for GitHub. Exposes tools to search repositories, read repository details, list/get issues, create issues, and list/get pull requests. Set GITHUB_TOKEN for authenticated requests."
 )]
 impl ServerHandler for GithubServer {}
