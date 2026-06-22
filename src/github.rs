@@ -25,12 +25,16 @@ impl From<GithubError> for rmcp::ErrorData {
     }
 }
 
+// Code is not actually dead, the compiler just cannot determine where it is called
+// due to the MCP crate creating it automatically.
+#[allow(dead_code)]
 #[derive(Clone)]
 pub struct GithubClient {
     http: Client,
     token: Option<String>,
 }
 
+#[allow(dead_code)]
 impl GithubClient {
     pub fn new(token: Option<String>) -> Self {
         let http = Client::builder()
@@ -48,6 +52,18 @@ impl GithubClient {
 
     pub async fn post(&self, path: &str, body: Value) -> Result<Value, GithubError> {
         self.request(Method::POST, path, Some(body)).await
+    }
+
+    pub async fn put(&self, path: &str, body: Value) -> Result<Value, GithubError> {
+        self.request(Method::POST, path, Some(body)).await
+    }
+
+    pub async fn patch(&self, path: &str, body: Value) -> Result<Value, GithubError> {
+        self.request(Method::PATCH, path, Some(body)).await
+    }
+
+    pub async fn delete(&self, path: &str) -> Result<Value, GithubError> {
+        self.request(Method::DELETE, path, None).await
     }
 
     async fn request(

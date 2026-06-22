@@ -2,7 +2,7 @@ mod github;
 mod server;
 
 use rmcp::{ServiceExt, transport::stdio};
-use server::GithubServer;
+use server::GitHubServer;
 use std::io;
 use tracing_subscriber::{self, EnvFilter};
 
@@ -21,7 +21,7 @@ async fn main() -> anyhow::Result<()> {
         );
     }
 
-    let server = GithubServer::new(token);
+    let server = GitHubServer::new(token);
     let service = server.serve(stdio()).await.inspect_err(|e| {
         tracing::error!("failed to start MCP server: {e:?}");
     })?;
