@@ -1,6 +1,6 @@
 # GitHub MCP
 
-A local Rust-based Model Context Protocol (MCP) server that exposes GitHub repository, issue, pull request, and label operations over stdio.
+A local Rust-based Model Context Protocol (MCP) server that exposes GitHub repository, issue, pull request, label, and GitHub Projects v2 operations over stdio.
 
 ## Problem Solved
 
@@ -17,6 +17,7 @@ A local Rust-based Model Context Protocol (MCP) server that exposes GitHub repos
 - Provides pull request listing, pull request retrieval, and pull request creation tools.
 - Provides repository label management tools.
 - Provides issue label management tools.
+- Provides GitHub Projects v2 tools for project lookup, field discovery, item listing, adding/removing issues, updating project fields, clearing project fields, and moving issues between kanban/status columns.
 - Supports manual pagination with `page` and `per_page`.
 - Normalizes issue and pull request state filters to `open`, `closed`, or `all`.
 - Reports GitHub API failures back to the MCP client with status and response details.
@@ -123,6 +124,22 @@ Note: `list_issue_lables` is exposed with the current tool name spelling used by
 | `get_pull_request` | Get a specific pull request. | `owner`, `repo`, `pull_number` |
 | `create_pull_request` | Create a new pull request for a repository. | `owner`, `repo`, `title`, `body`, `head`, `base`, `issue` |
 
+### GitHub Projects v2 Tools
+
+These tools use GitHub's GraphQL API because GitHub Projects v2 is primarily exposed through GraphQL.
+
+| Tool | Description | Key Parameters |
+| --- | --- | --- |
+| `get_project` | Get a Projects v2 project by owner type and project number, including fields and selectable options. | `owner_type`, `owner_login`, `project_number` |
+| `get_project_fields` | Get project field IDs, names, data types, single-select options, and iteration metadata. | `project_id` |
+| `list_project_items` | List items in a project, including issue/PR content and current project field values. | `project_id`, `first`, `after` |
+| `add_issue_to_project` | Add an issue to a project. You can pass either an issue node ID or repository issue coordinates. | `project_id`, `issue_node_id`, `owner`, `repo`, `issue_number` |
+| `get_project_item_for_issue` | Find the Projects v2 item ID for an issue already in a project. | `project_id`, `owner`, `repo`, `issue_number` |
+| `remove_issue_from_project` | Remove an issue item from a project. | `project_id`, `item_id`, `owner`, `repo`, `issue_number` |
+| `set_project_item_field` | Fill out or update a project field value for an issue. Supports text, number, date, single-select, and iteration fields. | `project_id`, `item_id`, `owner`, `repo`, `issue_number`, `field_id`, `field_name`, `value_type`, `value`, `option_id`, `iteration_id` |
+| `clear_project_item_field` | Clear a project field value for an issue. | `project_id`, `item_id`, `owner`, `repo`, `issue_number`, `field_id`, `field_name` |
+| `move_project_issue_to_column` | Move an issue between kanban/status columns by updating a single-select status field. | `project_id`, `item_id`, `owner`, `repo`, `issue_number`, `field_id`, `field_name`, `column_name`, `option_id` |
+
 ## Parameter Notes
 
 For list operations:
@@ -146,6 +163,18 @@ For label colors:
 
 - GitHub expects hexadecimal colors without the leading `#`.
 
+For GitHub Projects v2 tools:
+
+- `project_id`, `item_id`, `field_id`, `option_id`, and `iteration_id` are GitHub GraphQL node IDs.
+- Use `get_project` to find a project's `project_id` from an owner and project number.
+- Use `get_project_fields` to discover field IDs, field names, field data types, single-select option IDs, and iteration IDs.
+- Tools that manipulate an issue in a project can use `item_id` directly. If `item_id` is omitted, provide `owner`, `repo`, and `issue_number` so the server can find the matching project item.
+- `move_project_issue_to_column` defaults to the `Status` field when `field_name` is omitted.
+- `set_project_item_field` supports `value_type` values of `text`, `number`, `date`, `single_select`, and `iteration`.
+- For `single_select` fields, pass `option_id` when known; otherwise `value` is matched against the option name.
+- For `iteration` fields, pass `iteration_id` when known; otherwise `value` is matched against the iteration title.
+- Dates should use GitHub's expected `YYYY-MM-DD` format.
+
 ## Authentication and Permissions
 
 Read-only tools can often work against public repositories without authentication. Authenticated requests are recommended for all use cases and are required for many write operations.
@@ -156,6 +185,10 @@ The token used with `GITHUB_TOKEN` should have permissions appropriate for the o
 - Creating issues requires issue write access.
 - Creating pull requests requires pull request write access.
 - Creating, updating, or deleting labels requires repository metadata/administration permissions as enforced by GitHub.
+- Reading GitHub Projects v2 data requires project read access.
+- Adding issues to projects, removing project items, moving issues between project columns, and updating or clearing project fields require project write access.
+- Fine-grained personal access tokens may need repository access plus organization/user project permissions, depending on where the project lives.
+- Classic personal access tokens commonly require appropriate `repo` and/or project-related scopes for private repositories and project write operations.
 
 Do not hardcode personal access tokens into source files or commit them to version control.
 
@@ -177,7 +210,7 @@ Common development commands:
 - Pagination is controlled manually with `page` and `per_page`.
 - The server does not cache GitHub API responses.
 - GitHub API errors are returned to the MCP client with HTTP status and response details.
-- The server currently focuses on repositories, issues, pull requests, repository labels, and issue labels.
+- The server currently focuses on repositories, issues, pull requests, repository labels, issue labels, and GitHub Projects v2 issue/project-item workflows.
 - Branch, commit, release, and comment tools are not currently implemented.
 
 ## Planned Enhancements

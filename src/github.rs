@@ -55,7 +55,7 @@ impl GithubClient {
     }
 
     pub async fn put(&self, path: &str, body: Value) -> Result<Value, GithubError> {
-        self.request(Method::POST, path, Some(body)).await
+        self.request(Method::PUT, path, Some(body)).await
     }
 
     pub async fn patch(&self, path: &str, body: Value) -> Result<Value, GithubError> {
@@ -64,6 +64,28 @@ impl GithubClient {
 
     pub async fn delete(&self, path: &str) -> Result<Value, GithubError> {
         self.request(Method::DELETE, path, None).await
+    }
+
+    pub async fn graphql(&self, query: &str, variables: Value) -> Result<Value, GithubError> {
+        let body = if variables.is_null() {
+            json!({ "query": query })
+        } else {
+            json!({
+                "query": query,
+                "variables": variables
+            })
+        };
+
+        let response = self.request(Method::POST, "/graphql", Some(body)).await?;
+
+        if let Some(errors) = response.get("errors") {
+            return Err(GithubError::Api {
+                status: 200,
+                body: errors.to_string(),
+            });
+        }
+
+        Ok(response)
     }
 
     async fn request(
@@ -101,6 +123,10 @@ impl GithubClient {
                 status: status.as_u16(),
                 body: text,
             });
+        }
+
+        if text.trim().is_empty() {
+            return Ok(Value::Null);
         }
 
         Ok(serde_json::from_str(&text)?)
